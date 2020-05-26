@@ -1,0 +1,13 @@
+# Default values for license-server.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+certIssuer:
+  email: "" # This is a required field if create == true
+  name: lets-encrypt-http-issuer
+  secretName: letsencrypt-credentials
+  server: https://acme-v02.api.letsencrypt.org/directory
+  httpResolver:
+    enabled: true
+    ingressClass: nginx
+  resolvers: []

@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish-chart:
+    needs: [publish-images]
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - uses: azure/setup-helm@v1
+        with:
+          version: 'v3.0.2'
+      - run: |
+          RELEASE_VERSION=$(echo $GITHUB_REF | sed -nE 's!refs/tags/v!!p')
+          helm plugin install https://github.com/chartmuseum/helm-push.git
+          helm repo add chartmuseum $CHART_MUSEUM_URL --username $CHART_MUSEUM_USER --password $CHART_MUSEUM_PASSWORD
+          helm push --force --version="$RELEASE_VERSION" chart/ chartmuseum
+        env:
+          CHART_MUSEUM_URL: "https://charts.devspace.sh/"
+          CHART_MUSEUM_USER: ${{ secrets.CHART_MUSEUM_USER }}
+          CHART_MUSEUM_PASSWORD: ${{ secrets.CHART_MUSEUM_PASSWORD }}
+  release-notes:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 300
+      - id: get_version
+        run: |
+          RELEASE_VERSION=$(echo $GITHUB_REF | sed -nE 's!refs/tags/!!p')
+          echo "::set-output name=release_version::$RELEASE_VERSION"
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.13
+      - run: go get -u github.com/git-chglog/git-chglog/cmd/git-chglog
+      - uses: geertvdc/setup-hub@v1.0.0
+      - run: |
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          
+          DESCRIPTION=$(git-chglog $(git describe --tags $(git rev-list --tags --max-count=1)))
+          STATE=$(hub release show "$RELEASE_VERSION" --format="%S" | sed -En "s/-//p")
+
+          EXTRA_ARGS=""
+
+          if [ "$STATE" != "" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --$STATE"
+          else
+            EXTRA_ARGS="$EXTRA_ARGS --prerelease=false --draft=false"
+          fi
+
+          hub release edit -m "$RELEASE_VERSION" -m "$DESCRIPTION" $EXTRA_ARGS "$RELEASE_VERSION"
+        env:
+          RELEASE_VERSION: ${{ steps.get_version.outputs.release_version }}
+          GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
