@@ -6,7 +6,6 @@ on:
 
 jobs:
   publish-chart:
-    needs: [publish-images]
     runs-on: ubuntu-18.04
     steps:
       - name: Check out code
