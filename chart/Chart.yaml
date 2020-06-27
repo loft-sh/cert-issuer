@@ -4,7 +4,7 @@ description: ClusterIssuer for cert-manager
 home: https://loft.sh
 icon: https://static.devspace.cloud/charts/logo-cert-issuer.svg
 sources:
-- https://github.com/devspace-cloud/cert-issuer
+- https://github.com/loft-sh/cert-issuer
 keywords:
 - cert-manager
 - ssl
